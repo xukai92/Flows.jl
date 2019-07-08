@@ -5,6 +5,8 @@ using Requires
 
 import Base: inv
 
+### Abstractions
+
 abstract type AbstractInvertibleTransformation end
 
 # NOTE: The second argument `x` is assumed to be the **input** of the transformation `t` (t: x -> y).
@@ -51,10 +53,25 @@ export AbstractInvertibleTransformation, logabsdetjacob, forward,
        Inversed, inv, 
        Composed, compose
 
+### Transformations
+
 # Logit transformation
 
 using StatsFuns: logistic, logit
 include("logit.jl")
 export Logit
+
+# Affine coupling transformation
+
+include("coupling.jl")
+export AffineCoupling
+
+# Make all transformations callable.
+# This has to be done in this manner because
+# we cannot add method to abstract types.
+
+for T in [Logit, AffineCoupling]
+    @eval (t::$T)(x) = forward(t, x)
+end
 
 end # module

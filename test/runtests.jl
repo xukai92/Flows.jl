@@ -16,4 +16,5 @@ using Test, Flows
     end
 
     include("logit.jl")
+    include("coupling.jl")
 end
