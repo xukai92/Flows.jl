@@ -7,6 +7,7 @@ import Base: inv
 
 abstract type AbstractInvertibleTransformation end
 
+# NOTE: The second argument `x` is assumed to be the **input** of the transformation `t` (t: x -> y).
 logabsdetjacob(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} = 
     error("`logabsdetjacob(t::$T1, x::$T2)` is not implemented.")
 forward(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} = 
@@ -21,6 +22,7 @@ end
 inv(t::T) where {T<:AbstractInvertibleTransformation} = Inversed(t)
 inv(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = it.original
 
+# NOTE: The second argument `y` is assumed to be the **input** of the transformation `it` (it: y -> x).
 logabsdetjacob(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} = 
     error("`logabsdetjacob(it::$T1, y::$T2)` is not implemented.")
 forward(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} = 
