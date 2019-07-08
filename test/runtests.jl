@@ -1,4 +1,5 @@
 using Test, Flows
+# using CuArrays
 
 @testset "Tests" begin
     @testset "Abstraction" begin
@@ -15,5 +16,4 @@ using Test, Flows
     end
 
     include("logit.jl")
-    
 end

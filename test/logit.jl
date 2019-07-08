@@ -3,7 +3,6 @@ using Distributions: logpdf, Truncated, Normal
 using Bijectors: logpdf_with_trans
 using StatsFuns: logit
 using Flux: gpu
-using CuArrays
 
 function test_Logit()
     # x -> y and y -> x
