@@ -1,5 +1,3 @@
-CuArrays.@cufunc logit(x) = log(x) - log(1 - x)
-
 struct Logit{T<:Real} <: AbstractInvertibleTransformation
     a::T
     b::T

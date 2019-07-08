@@ -1,9 +1,9 @@
 module Flows
 
-greet() = print("Hello World!")
+using Requires
+@init @require CuArrays="3a865a2d-5b23-5a0f-bc46-62713ec82fae" include("gpu.jl")
 
 import Base: inv
-import CuArrays
 
 abstract type AbstractInvertibleTransformation end
 
