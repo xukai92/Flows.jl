@@ -42,8 +42,11 @@ compose(ts...) = Composed([ts...])
 inv(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = Composed(map(inv, reverse(ct.ts)))
 
 function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
-    res = (rv=x, logabsdetjacob=0)
-    for t in ct.ts
+    # Evaluate the first transform to init `res` so that 
+    # we avoid possible type instability issues, which would happen
+    # especially using GPUs.
+    res = forward(ct.ts[1], x)
+    for t in ct.ts[2:end]
         res′ = forward(t, res.rv)
         res = (rv=res′.rv, logabsdetjacob=res.logabsdetjacob + res′.logabsdetjacob)
     end
