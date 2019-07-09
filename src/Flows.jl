@@ -5,6 +5,7 @@ using Requires
 
 import Base: inv
 import Flux: children
+import Distributions: rand, logpdf
 
 ### Abstractions
 
@@ -53,12 +54,6 @@ function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
     return res
 end
 
-# Flux support
-
-children(t::AbstractInvertibleTransformation) = map(pn -> getfield(t, pn), propertynames(t))
-children(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = children(it.original)
-children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = mapreduce(children, union, ct.ts)
-
 export AbstractInvertibleTransformation, logabsdetjacob, forward, 
        Inversed, inv, 
        Composed, compose
@@ -83,5 +78,29 @@ export AffineCoupling, AbstractMasking, AlternatingMasking, instantiate
 for T in [Inversed, Composed, Logit, AffineCoupling]
     @eval (t::$T)(x) = forward(t, x)
 end
+
+### Flow
+# Note: the flow abstraction is a draft and subject to change
+
+struct Flow{T<:AbstractInvertibleTransformation}
+    t::T
+    base
+end
+
+# TODO: figure out what's the best way to do below
+rand(f::Flow{T}, n::Int) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n::Int)).rv
+
+# We cannot use broadcast as that doesn't work with 
+# multivariate random variables.
+logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation} = logpdf(f.base, forward(inv(f.t), x).rv)
+
+export Flow, rand, logpdf, dim
+
+### Flux support
+
+children(t::AbstractInvertibleTransformation) = map(pn -> getfield(t, pn), propertynames(t))
+children(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = children(it.original)
+children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = mapreduce(children, union, ct.ts)
+children(f::Flow{T}) where {T<:AbstractInvertibleTransformation} = map(pn -> getfield(f, pn), propertynames(f))
 
 end # module
