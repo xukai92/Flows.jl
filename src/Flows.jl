@@ -74,7 +74,7 @@ export Logit
 # Affine coupling transformation
 
 include("coupling.jl")
-export AffineCoupling
+export AffineCoupling, AbstractMasking, AlternatingMasking, instantiate
 
 # Make all transformations callable.
 # This has to be done in this manner because

@@ -25,3 +25,17 @@ function forward(it::Inversed{AffineCoupling}, y)
     x = y_masked + (1 .- mask) .* (y - t.t(y_masked)) .* invexps
     return (rv=x, logabsdetjacob=-logabsdetjacob(t, nothing; exps=1 ./ invexps))
 end
+
+# Masking methods
+
+abstract type AbstractMasking end
+
+instantiate(::T) where {T<:AbstractMasking} = error("`create(::$T)` is not implemented.")
+
+struct AlternatingMasking{T<:Function} <: AbstractMasking
+    dim::Int
+    is1::T
+end
+AlternatingMasking(dim) = AlternatingMasking(dim, i -> i % 2 == 0)
+
+instantiate(masking::AlternatingMasking)::Vector{Bool} = [masking.is1(i) for i in 1:masking.dim]
