@@ -4,6 +4,7 @@ using Requires
 @init @require CuArrays="3a865a2d-5b23-5a0f-bc46-62713ec82fae" include("gpu.jl")
 
 import Base: inv
+import Flux: children
 
 ### Abstractions
 
@@ -49,6 +50,12 @@ function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
     return res
 end
 
+# Flux support
+
+children(t::AbstractInvertibleTransformation) = map(pn -> getfield(t, pn), propertynames(t))
+children(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = children(it.original)
+children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = mapreduce(children, union, ct.ts)
+
 export AbstractInvertibleTransformation, logabsdetjacob, forward, 
        Inversed, inv, 
        Composed, compose
@@ -70,7 +77,7 @@ export AffineCoupling
 # This has to be done in this manner because
 # we cannot add method to abstract types.
 
-for T in [Logit, AffineCoupling]
+for T in [Inversed, Composed, Logit, AffineCoupling]
     @eval (t::$T)(x) = forward(t, x)
 end
 
