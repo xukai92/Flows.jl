@@ -92,9 +92,13 @@ rand(f::Flow{T}, n::Int) where {T<:AbstractInvertibleTransformation} = f.t(rand(
 
 # We cannot use broadcast as that doesn't work with 
 # multivariate random variables.
-logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation} = logpdf(f.base, forward(inv(f.t), x).rv)
+function logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation}
+    it = inv(f.t)
+    res = forward(it, x)
+    return logpdf(f.base, res.rv) + res.logabsdetjacob
+end
 
-export Flow, rand, logpdf, dim
+export Flow, rand, logpdf
 
 ### Flux support
 
