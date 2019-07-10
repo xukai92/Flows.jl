@@ -1,10 +1,11 @@
 module Flows
 
+
 using Requires
 @init @require CuArrays="3a865a2d-5b23-5a0f-bc46-62713ec82fae" include("gpu.jl")
 
 import Base: inv
-import Flux: children
+import Flux
 import Distributions: rand, logpdf
 
 ### Abstractions
@@ -71,11 +72,17 @@ export Logit
 include("coupling.jl")
 export AffineCoupling, AffineCouplingSlow, AbstractMasking, AlternatingMasking, instantiate
 
+# Batch normalisation transformation
+
+using Statistics: mean
+include("norm.jl")
+export InvertibleBatchNorm
+
 # Make all transformations callable.
 # This has to be done in this manner because
 # we cannot add method to abstract types.
 
-for T in [Inversed, Composed, Logit, AffineCoupling]
+for T in [Inversed, Composed, Logit, AffineCoupling, InvertibleBatchNorm]
     @eval (t::$T)(x) = forward(t, x)
 end
 
@@ -102,9 +109,17 @@ export Flow, rand, logpdf
 
 ### Flux support
 
-children(t::AbstractInvertibleTransformation) = map(pn -> getfield(t, pn), propertynames(t))
-children(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = children(it.original)
-children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = mapreduce(children, union, ct.ts)
-children(f::Flow{T}) where {T<:AbstractInvertibleTransformation} = map(pn -> getfield(f, pn), propertynames(f))
+Flux.children(t::T) where {T<:AbstractInvertibleTransformation} = map(pn -> getfield(t, pn), propertynames(t))
+Flux.mapchildren(f, t::T) where {T<:AbstractInvertibleTransformation} = T(f.(children(ct))...)
+
+Flux.@treelike(Inversed)
+
+Flux.children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = tuple(ct.ts...)
+Flux.mapchildren(f, ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = compose(f.(children(ct))...)
+
+Flux.@treelike(AffineCoupling)
+
+Flux.@treelike(Flow)
+
 
 end # module

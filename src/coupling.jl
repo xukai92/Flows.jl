@@ -43,7 +43,7 @@ function forward(t::T, x) where {T<:AbstractAffineCoupling}
 end
 
 function forward(it::Inversed{T}, y) where {T<:AbstractAffineCoupling}
-    t = it.original; mask = t.mask
+    t = inv(it); mask = t.mask
     y_masked = mask .* y
     st = computest(t, y_masked)
     invexps = exp.(-st.s)
