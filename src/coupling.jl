@@ -1,32 +1,57 @@
-struct AffineCoupling <: AbstractInvertibleTransformation
+### Affine coupling layer from (Dinh et al., 2017)
+
+abstract type AbstractAffineCoupling <: AbstractInvertibleTransformation end
+
+# Affine coupling layer with a single function computing s and t
+
+struct AffineCoupling <: AbstractAffineCoupling
+    st
+    mask
+end
+
+function computest(t::AffineCoupling, input)
+    dim = size(input, 1)
+    st = t.st(input)
+    return (s=st[1:dim,:], t=st[dim+1:end,:])
+end
+computes(t::AffineCoupling, input) = computest(t, input).s
+
+# Affine coupling layer with two functions computing s and t
+
+struct AffineCouplingSlow <: AbstractAffineCoupling
     s
     t
     mask
 end
 
-logabsdetjacob(
-    t::AffineCoupling, 
-    x; 
-    exps=exp.(t.s(t.mask .* x))
-) = sum(exps; dims=1)
+computest(t::AffineCouplingSlow, input) = (s=t.s(input), t=t.t(input))
+computes(t::AffineCouplingSlow, input) = t.s(input)
 
-function forward(t::AffineCoupling, x)
+logabsdetjacob(
+    t::T, 
+    x; 
+    exps=exp.(computes(t, t.mask .* x))
+) where {T<:AbstractAffineCoupling} = sum(exps; dims=1)
+
+function forward(t::T, x) where {T<:AbstractAffineCoupling}
     mask = t.mask
     x_masked = mask .* x
-    exps = exp.(t.s(x_masked))
-    y = x_masked + (1 .- mask) .* (x .* exps + t.t(x_masked))
+    st = computest(t, x_masked)
+    exps = exp.(st.s)
+    y = x_masked + (1 .- mask) .* (x .* exps + st.t)
     return (rv=y, logabsdetjacob=logabsdetjacob(t, nothing; exps=exps))
 end
 
-function forward(it::Inversed{AffineCoupling}, y)
+function forward(it::Inversed{T}, y) where {T<:AbstractAffineCoupling}
     t = it.original; mask = t.mask
     y_masked = mask .* y
-    invexps = exp.(-t.s(y_masked))
-    x = y_masked + (1 .- mask) .* (y - t.t(y_masked)) .* invexps
+    st = computest(t, y_masked)
+    invexps = exp.(-st.s)
+    x = y_masked + (1 .- mask) .* (y - st.t) .* invexps
     return (rv=x, logabsdetjacob=-logabsdetjacob(t, nothing; exps=1 ./ invexps))
 end
 
-# Masking methods
+### Masking methods
 
 abstract type AbstractMasking end
 
