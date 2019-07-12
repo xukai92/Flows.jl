@@ -78,6 +78,11 @@ using Statistics: mean
 include("norm.jl")
 export InvertibleBatchNorm
 
+# Distributions
+
+include("distributions.jl")
+export MvNormal01
+
 # Make all transformations callable.
 # This has to be done in this manner because
 # we cannot add method to abstract types.
@@ -118,6 +123,7 @@ Flux.children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = tup
 Flux.mapchildren(f, ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = compose(f.(children(ct))...)
 
 Flux.@treelike(AffineCoupling)
+Flux.@treelike(AffineCouplingSlow)
 
 Flux.@treelike(Flow)
 
