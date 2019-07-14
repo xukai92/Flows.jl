@@ -3,9 +3,9 @@ using MLToolkit
 using LinearAlgebra
 using Random
 
-abstract type AbstractFlow end
+abstract type AbstractFlow <: AbstractInvertibleTransformation end
 
-abstract type AbstractPlanarFlow <:AbstractFlow end
+abstract type AbstractPlanarFlow <: AbstractFlow end
 
 struct PlanarFlow <: AbstractPlanarFlow
     wₖ
