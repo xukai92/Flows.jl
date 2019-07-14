@@ -19,7 +19,7 @@ end
 
 function update_u_hat(uₖ, wₖ)
     # to preserve invertibility
-    u_hat  = [[1,1] for i in 1:length(uₖ)]
+    u_hat  = [[1.0,1.0] for i in 1:length(uₖ)]
     for i in 1:length(uₖ)
         u_hat[i] = uₖ[i] + (m(transpose(wₖ[i])*uₖ[i]) - transpose(wₖ[i])*uₖ[i])*wₖ[i]/(norm(wₖ[i],2)^2)
     end
@@ -90,3 +90,5 @@ function forward(flow::Inversed{T}, z) where {T<:AbstractPlanarFlow}
     # TODO: Implement
     0
 end
+
+PlanarFlow(2,6)
