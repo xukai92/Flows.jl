@@ -92,7 +92,7 @@ export MvNormal01
 # This has to be done in this manner because
 # we cannot add method to abstract types.
 
-for T in [Inversed, Composed, Logit, AffineCoupling, InvertibleBatchNorm]
+for T in [Inversed, Composed, Logit, AffineCoupling, InvertibleBatchNorm, PlanarFlow]
     @eval (t::$T)(x) = forward(t, x)
 end
 
