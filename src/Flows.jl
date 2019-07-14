@@ -13,9 +13,9 @@ import Distributions: rand, logpdf
 abstract type AbstractInvertibleTransformation end
 
 # NOTE: The second argument `x` is assumed to be the **input** of the transformation `t` (t: x -> y).
-logabsdetjacob(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} = 
+logabsdetjacob(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} =
     error("`logabsdetjacob(t::$T1, x::$T2)` is not implemented.")
-forward(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} = 
+forward(t::T1, x::T2) where {T1<:AbstractInvertibleTransformation,T2} =
     error("`forward(t::$T1, x::$T2)` is not implemented.")
 
 # Inverse
@@ -28,9 +28,9 @@ inv(t::T) where {T<:AbstractInvertibleTransformation} = Inversed(t)
 inv(it::Inversed{T}) where {T<:AbstractInvertibleTransformation} = it.original
 
 # NOTE: The second argument `y` is assumed to be the **input** of the transformation `it` (it: y -> x).
-logabsdetjacob(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} = 
+logabsdetjacob(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} =
     error("`logabsdetjacob(it::$T1, y::$T2)` is not implemented.")
-forward(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} = 
+forward(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T},T2} =
     error("`forward(it::$T1, y::$T2)` is not implemented.")
 
 # Composition
@@ -44,7 +44,7 @@ compose(ts...) = Composed([ts...])
 inv(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = Composed(map(inv, reverse(ct.ts)))
 
 function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
-    # Evaluate the first transform to init `res` so that 
+    # Evaluate the first transform to init `res` so that
     # we avoid possible type instability issues, which would happen
     # especially using GPUs.
     res = forward(ct.ts[1], x)
@@ -55,8 +55,8 @@ function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
     return res
 end
 
-export AbstractInvertibleTransformation, logabsdetjacob, forward, 
-       Inversed, inv, 
+export AbstractInvertibleTransformation, logabsdetjacob, forward,
+       Inversed, inv,
        Composed, compose
 
 ### Transformations
@@ -71,6 +71,11 @@ export Logit
 
 include("coupling.jl")
 export AffineCoupling, AffineCouplingSlow, AbstractMasking, AlternatingMasking, instantiate
+
+#Normalised Flows Transformations
+
+include("norm_flows.jl")
+export PlanarFlow
 
 # Batch normalisation transformation
 
@@ -102,7 +107,7 @@ end
 # TODO: figure out what's the best way to do below
 rand(f::Flow{T}, n::Int) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n::Int)).rv
 
-# We cannot use broadcast as that doesn't work with 
+# We cannot use broadcast as that doesn't work with
 # multivariate random variables.
 function logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation}
     it = inv(f.t)
