@@ -30,25 +30,23 @@ computes(t::AffineCouplingSlow, input) = t.s(input)
 logabsdetjacob(
     t::T, 
     x; 
-    exps=exp.(computes(t, t.mask .* x))
-) where {T<:AbstractAffineCoupling} = sum(exps; dims=1)
+    s=computes(t, t.mask .* x)
+) where {T<:AbstractAffineCoupling} = sum((1 .- t.mask) .* s; dims=1)
 
 function forward(t::T, x) where {T<:AbstractAffineCoupling}
     mask = t.mask
     x_masked = mask .* x
     st = computest(t, x_masked)
-    exps = exp.(st.s)
-    y = x_masked + (1 .- mask) .* (x .* exps + st.t)
-    return (rv=y, logabsdetjacob=logabsdetjacob(t, nothing; exps=exps))
+    y = x_masked + (1 .- mask) .* (x .* exp.(st.s) + st.t)
+    return (rv=y, logabsdetjacob=logabsdetjacob(t, nothing; s=st.s))
 end
 
 function forward(it::Inversed{T}, y) where {T<:AbstractAffineCoupling}
     t = inv(it); mask = t.mask
     y_masked = mask .* y
     st = computest(t, y_masked)
-    invexps = exp.(-st.s)
-    x = y_masked + (1 .- mask) .* (y - st.t) .* invexps
-    return (rv=x, logabsdetjacob=-logabsdetjacob(t, nothing; exps=1 ./ invexps))
+    x = y_masked + (1 .- mask) .* (y - st.t) .* exp.(-st.s)
+    return (rv=x, logabsdetjacob=-logabsdetjacob(t, nothing; s=st.s))
 end
 
 ### Masking methods
