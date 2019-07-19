@@ -59,8 +59,6 @@ export AbstractInvertibleTransformation, logabsdetjacob, forward,
        Inversed, inv, 
        Composed, compose
 
-### Transformations
-
 # Logit transformation
 
 using StatsFuns: logistic, logit
@@ -100,7 +98,7 @@ struct Flow{T<:AbstractInvertibleTransformation}
 end
 
 # TODO: figure out what's the best way to do below
-rand(f::Flow{T}, n::Int) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n::Int)).rv
+rand(f::Flow{T}, n::Int=1) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n::Int)).rv
 
 # We cannot use broadcast as that doesn't work with 
 # multivariate random variables.

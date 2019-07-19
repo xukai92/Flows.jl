@@ -1,6 +1,8 @@
 using CuArrays: @cufunc
 
 @cufunc logit(x) = log(x) - log(1 - x)
+@cufunc logistic(x) = inv(exp(-x) + 1)
+
 
 import Flux: cpu, gpu
 

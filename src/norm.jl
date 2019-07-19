@@ -34,7 +34,7 @@ logabsdetjacob(
     t::T, 
     x; 
     σ²=reshape(t.σ², affinesize(x)...)
-) where {T<:InvertibleBatchNorm} =  (sum(t.logγ) - sum(log.(σ² .+ t.ϵ)) / 2) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
+) where {T<:InvertibleBatchNorm} =  (sum(exp.(t.logγ) - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
 
 function forward(t::T, x) where {T<:InvertibleBatchNorm} 
     @assert size(x, ndims(x) - 1) == length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
