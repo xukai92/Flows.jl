@@ -14,7 +14,7 @@ end
 
 InvertibleBatchNorm(chs::Int; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
     Flux.param(zeros(Float32, chs)),
-    Flux.param(ones(Float32, chs)),
+    Flux.param(zeros(Float32, chs)),
     zeros(Float32, chs), 
     ones(Float32, chs), 
     ϵ, 
@@ -34,7 +34,7 @@ logabsdetjacob(
     t::T, 
     x; 
     σ²=reshape(t.σ², affinesize(x)...)
-) where {T<:InvertibleBatchNorm} =  (sum(exp.(t.logγ) - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
+) where {T<:InvertibleBatchNorm} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
 
 function forward(t::T, x) where {T<:InvertibleBatchNorm} 
     @assert size(x, ndims(x) - 1) == length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
