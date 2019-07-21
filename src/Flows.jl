@@ -75,7 +75,7 @@ export AffineCoupling, AffineCouplingSlow, AbstractMasking, AlternatingMasking, 
 #Normalised Flows Transformations
 
 include("norm_flows.jl")
-export PlanarLayer
+export PlanarLayer, RadialLayer
 
 # Batch normalisation transformation
 
@@ -92,7 +92,7 @@ export MvNormal01
 # This has to be done in this manner because
 # we cannot add method to abstract types.
 
-for T in [Inversed, Composed, Logit, AffineCoupling, InvertibleBatchNorm, PlanarLayer]
+for T in [Inversed, Composed, Logit, AffineCoupling, InvertibleBatchNorm, PlanarLayer, RadialLayer]
     @eval (t::$T)(x) = forward(t, x)
 end
 

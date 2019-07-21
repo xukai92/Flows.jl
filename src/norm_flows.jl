@@ -4,14 +4,20 @@ using Random
 using Flux
 
 abstract type AbstractFlow <: AbstractInvertibleTransformation end
-# abstract type AbstractFlow end
 abstract type AbstractPlanarLayer <: AbstractFlow end
+abstract type AbstractRadialLayer <: AbstractFlow end
 
 mutable struct PlanarLayer <: AbstractPlanarLayer
     w
     u
     u_hat
     b
+end
+
+mutable struct RadialLayer <: AbstractRadialLayer
+    α
+    β
+    z_not
 end
 
 function update_u_hat(u, w)
@@ -32,10 +38,27 @@ function PlanarLayer(dims::Int)
     return PlanarLayer(w, u, u_hat, b)
 end
 
+function RadialLayer(dims::Int)
+    α_ = params(randn(1))
+    β = params(randn(1))
+    z_not = param(randn(dims, 1))
+    return RadialLayer(α, β, z_not)
+end
+
 f(z, flow::PlanarLayer) = z + flow.u_hat*tanh.(transpose(flow.w)*z .+ flow.b)
-m(x) = -1 .+ log.(1 .+ exp.(x))
-dtanh(x) = 1 .- (tanh.(x)).^2
-ψ(z, w, b) = dtanh(transpose(w)*z .+ b).*w
+m(x) = -1 .+ log.(1 .+ exp.(x)) #for planar flow
+dtanh(x) = 1 .- (tanh.(x)).^2 #for planar flow
+ψ(z, w, b) = dtanh(transpose(w)*z .+ b).*w #for planar flow
+softplus(x) = log.(1 .+ exp.(x)) #for radial flow
+h(α, r) = 1 ./ (α .+ r) #for radial flow
+dh(α, r) = -dh(α, r).^2 #for radial flow
+
+function f(z, flow::RadialLayer)
+    α = softplus(flow.α_)
+    β_hat = -α + softplus(flow.β)
+    r = norm.(z - flow.z_not, 1)
+    return z + β_hat*h(α, r)*(z - flow.z_not)
+end
 
 function forward(flow::T, z) where {T<:AbstractPlanarLayer}
     update_u_hat!(flow)
@@ -44,5 +67,17 @@ function forward(flow::T, z) where {T<:AbstractPlanarLayer}
     psi = ψ(transformed, flow.w, flow.b)
     log_det_jacobian = log.(abs.(1.0 .+ transpose(psi)*flow.u_hat))
 
+    return (rv=transformed, logabsdetjacob=log_det_jacobian)
+end
+
+
+function forward(flow::T, z) where {T<:AbstractRadialLayer}
+    # compute log_det_jacobian
+    transformed = f(z, flow)
+    α = softplus(flow.α_)
+    β_hat = -α + softplus(flow.β)
+    r = norm.(z - flow.z_not, 1)
+    d = size(flow.z_not)[1]
+    log_det_jacobian = log.(((1 + β_hat*h(α, r)).^(d-1)) .* ( 1 +  β_hat*h(α, r) + β_hat*dh(α, r)*r))
     return (rv=transformed, logabsdetjacob=log_det_jacobian)
 end
