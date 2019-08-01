@@ -4,9 +4,9 @@ abstract type AbstractAffineCoupling <: AbstractInvertibleTransformation end
 
 # Affine coupling layer with a single function computing s and t
 
-struct AffineCoupling <: AbstractAffineCoupling
-    st
-    mask
+struct AffineCoupling{T,TM} <: AbstractAffineCoupling
+    st::T
+    mask::TM
 end
 
 function computest(t::AffineCoupling, input)
@@ -18,10 +18,10 @@ computes(t::AffineCoupling, input) = computest(t, input).s
 
 # Affine coupling layer with two functions computing s and t
 
-struct AffineCouplingSlow <: AbstractAffineCoupling
-    s
-    t
-    mask
+struct AffineCouplingSlow{T1,T2,TM} <: AbstractAffineCoupling
+    s::T1
+    t::T2
+    mask::TM
 end
 
 computest(t::AffineCouplingSlow, input) = (s=logistic.(t.s(input) .+ 2), t=t.t(input))
@@ -61,4 +61,4 @@ struct AlternatingMasking{T<:Function} <: AbstractMasking
 end
 AlternatingMasking(dim) = AlternatingMasking(dim, i -> i % 2 == 0)
 
-instantiate(masking::AlternatingMasking)::Vector{Bool} = [masking.is1(i) for i in 1:masking.dim]
+instantiate(masking::AlternatingMasking) = Int[masking.is1(i) for i in 1:masking.dim]

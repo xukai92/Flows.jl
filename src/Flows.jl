@@ -35,15 +35,15 @@ forward(it::T1, y::T2) where {T<:AbstractInvertibleTransformation,T1<:Inversed{T
 
 # Composition
 
-struct Composed{T<:AbstractInvertibleTransformation} <: AbstractInvertibleTransformation
-    ts::Vector{T}
+struct Composed{TS<:Tuple{Vararg{AbstractInvertibleTransformation}}} <: AbstractInvertibleTransformation
+    ts::TS
 end
 
-compose(ts...) = Composed([ts...])
+compose(ts...) = Composed(tuple(ts...))
 
-inv(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = Composed(map(inv, reverse(ct.ts)))
+inv(ct::Composed) = compose(inv.(reverse(ct.ts))...)
 
-function forward(ct::Composed{<:AbstractInvertibleTransformation}, x)
+function forward(ct::Composed, x)
     # Evaluate the first transform to init `res` so that 
     # we avoid possible type instability issues, which would happen
     # especially using GPUs.
@@ -113,17 +113,20 @@ export Flow, rand, logpdf
 ### Flux support
 
 Flux.children(t::T) where {T<:AbstractInvertibleTransformation} = map(pn -> getfield(t, pn), propertynames(t))
-Flux.mapchildren(f, t::T) where {T<:AbstractInvertibleTransformation} = T(f.(Flux.children(ct))...)
+Flux.mapchildren(f, t::T) where {T<:AbstractInvertibleTransformation} = T(f.(Flux.children(t))...)
 
 Flux.@treelike(Inversed)
 
-Flux.children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = tuple(ct.ts...)
-Flux.mapchildren(f, ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = compose(f.(Flux.children(ct))...)
+Flux.children(ct::Composed) = tuple(ct.ts...)
+Flux.mapchildren(f, ct::Composed) = compose(f.(Flux.children(ct))...)
 
 Flux.@treelike(AffineCoupling)
 Flux.@treelike(AffineCouplingSlow)
 
 Flux.@treelike(Flow)
+
+# Flux type stability
+include("typestability.jl")
 
 
 end # module
