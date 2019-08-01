@@ -24,7 +24,7 @@ InvertibleBatchNorm(chs::Int; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
 
 function affinesize(x)
     dims = length(size(x))
-    return tuple(size(x, dims - 1), 1)
+    return tuple(1, size(x, dims - 1))
 #     channels = size(x, dims - 1)
 #     affinesize = ones(Int, dims)
 #     affinesize[end-1] = channels
