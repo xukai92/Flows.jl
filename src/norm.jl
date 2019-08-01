@@ -35,7 +35,7 @@ logabsdetjacob(
     t::T, 
     x; 
     σ²=reshape(t.σ², affinesize(x)...)
-) where {T<:InvertibleBatchNorm} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / 2)) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
+) where {T<:InvertibleBatchNorm} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / eltype(x)(2))) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
 
 function forward(t::T, x) where {T<:InvertibleBatchNorm} 
     @assert size(x, ndims(x) - 1) == length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
@@ -60,8 +60,11 @@ function forward(t::T, x) where {T<:InvertibleBatchNorm}
         t.σ² = (1 - mtm) .* t.σ² .+ (mtm * m / (m - 1)) .* reshape(Flux.data(σ²), :)
     end
     
-    x̂ = (x .- μ) ./ sqrt.(σ² .+ ϵ)
-    y = γ .* x̂ .+ β
+    temp1 = x .- μ
+    temp2 = sqrt.(σ² .+ ϵ)
+    x̂ = temp1 ./ temp2
+    temp = γ .* x̂
+    y = temp .+ β
     return (rv=y, logabsdetjacob=logabsdetjacob(t, x; σ²=σ²))
 end
 
@@ -77,8 +80,10 @@ function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
     μ = reshape(t.μ, as)
     σ² = reshape(t.σ², as)
         
-    ŷ = (y .- β) ./ γ
-    x = ŷ .* sqrt.(σ² .+ t.ϵ) .+ μ
+    temp = y .- β
+    ŷ = temp ./ γ
+    temp = sqrt.(σ² .+ t.ϵ)
+    x = ŷ .* temp .+ μ
     return (rv=x, logabsdetjacob=logabsdetjacob(it, x))
 end
 
