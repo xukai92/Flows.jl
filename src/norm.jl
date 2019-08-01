@@ -2,13 +2,13 @@
 # https://github.com/FluxML/Flux.jl/blob/68ba6e4e2fa4b86e2fef8dc6d0a5d795428a6fac/src/layers/normalise.jl#L117-L206
 # License: https://github.com/FluxML/Flux.jl/blob/master/LICENSE.md
 
-mutable struct InvertibleBatchNorm{T1,T2,TF<:AbstractFloat} <: AbstractInvertibleTransformation
-    β::T1
-    logγ::T1
-    μ::T2  # moving mean
-    σ²::T2 # moving st
-    ϵ::TF
-    momentum::TF
+mutable struct InvertibleBatchNorm <: AbstractInvertibleTransformation
+    β
+    logγ
+    μ  # moving mean
+    σ² # moving st
+    ϵ
+    momentum
     active::Bool
 end
 
@@ -24,11 +24,10 @@ InvertibleBatchNorm(chs::Int; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
 
 function affinesize(x)
     dims = length(size(x))
-    return tuple(1, size(x, dims - 1))
-#     channels = size(x, dims - 1)
-#     affinesize = ones(Int, dims)
-#     affinesize[end-1] = channels
-#     return tuple(affinesize...)
+    channels = size(x, dims-1)
+    affinesize = ones(Int, dims)
+    affinesize[end-1] = channels
+    return affinesize
 end
 
 logabsdetjacob(
@@ -41,11 +40,11 @@ function forward(t::T, x) where {T<:InvertibleBatchNorm}
     @assert size(x, ndims(x) - 1) == length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
     as = affinesize(x)
     m = prod(size(x)[1:end-2]) * size(x)[end]
-    γ = exp.(reshape(t.logγ, as))
-    β = reshape(t.β, as)
+    γ = exp.(reshape(t.logγ, as...))
+    β = reshape(t.β, as...)
     if !t.active
-        μ = reshape(t.μ, as)
-        σ² = reshape(t.σ², as)
+        μ = reshape(t.μ, as...)
+        σ² = reshape(t.σ², as...)
         ϵ = t.ϵ
     else
         Tx = eltype(x)
@@ -72,10 +71,10 @@ function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
     t = inv(it)
     @assert t.active == false "`forward(::Inversed{InvertibleBatchNorm})` is only available in test mode but not in training mode."
     as = affinesize(y)
-    γ = exp.(reshape(t.logγ, as))
-    β = reshape(t.β, as)
-    μ = reshape(t.μ, as)
-    σ² = reshape(t.σ², as)
+    γ = exp.(reshape(t.logγ, as...))
+    β = reshape(t.β, as...)
+    μ = reshape(t.μ, as...)
+    σ² = reshape(t.σ², as...)
         
     ŷ = (y .- β) ./ γ
     x = ŷ .* sqrt.(σ² .+ t.ϵ) .+ μ
