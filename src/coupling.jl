@@ -24,8 +24,8 @@ struct AffineCouplingSlow <: AbstractAffineCoupling
     mask
 end
 
-computest(t::AffineCouplingSlow, input) = (s=logistic.(t.s(input) .+ 2), t=t.t(input))
-computes(t::AffineCouplingSlow, input) = t.s(input)
+computes(t::AffineCouplingSlow, input) = logistic.(t.s(input) .+ 2)
+computest(t::AffineCouplingSlow, input) = (s=computes(t, input), t=t.t(input))
 
 logabsdetjacob(
     t::T, 
