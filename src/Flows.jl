@@ -4,6 +4,8 @@ module Flows
 using Requires
 @init @require CuArrays="3a865a2d-5b23-5a0f-bc46-62713ec82fae" include("gpu.jl")
 
+using Base: tail
+
 import Base: inv
 import Flux
 import Distributions: rand, logpdf
@@ -43,16 +45,18 @@ compose(ts...) = Composed(tuple(ts...))
 
 inv(ct::Composed) = compose(inv.(reverse(ct.ts))...)
 
+applycomposed(::Tuple{}, res) = res
+function applycomposed(ts::Tuple, res::T)::T where {T}
+    res′ = forward(first(ts), res.rv)
+    return applycomposed(tail(ts), (rv=res′.rv, logabsdetjacob=res.logabsdetjacob + res′.logabsdetjacob))
+end
+
 function forward(ct::Composed, x)
     # Evaluate the first transform to init `res` so that 
     # we avoid possible type instability issues, which would happen
     # especially using GPUs.
     res = forward(ct.ts[1], x)
-    for t in ct.ts[2:end]
-        res′ = forward(t, res.rv)
-        res = (rv=res′.rv, logabsdetjacob=res.logabsdetjacob + res′.logabsdetjacob)
-    end
-    return res
+    return applycomposed(tail(ct.ts), res)
 end
 
 export AbstractInvertibleTransformation, logabsdetjacob, forward, 
