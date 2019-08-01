@@ -24,41 +24,28 @@ struct AffineCouplingSlow{T1,T2,TM} <: AbstractAffineCoupling
     mask::TM
 end
 
-function computes(t::AffineCouplingSlow, input)
-    temp = t.s(input) .+ eltype(input)(2)
-    return logistic.(temp)
-end
-
-computest(t::AffineCouplingSlow, input) = (s=computes(t, input), t=t.t(input))
+computest(t::AffineCouplingSlow, input) = (s=logistic.(t.s(input) .+ 2), t=t.t(input))
+computes(t::AffineCouplingSlow, input) = t.s(input)
 
 logabsdetjacob(
     t::T, 
     x; 
     s=computes(t, t.mask .* x)
-) where {T<:AbstractAffineCoupling} = (invmask = 1 .- t.mask; sum(invmask .* s; dims=1))
+) where {T<:AbstractAffineCoupling} = sum((1 .- t.mask) .* s; dims=1)
 
 function forward(t::T, x) where {T<:AbstractAffineCoupling}
     mask = t.mask
-    invmask = 1 .- mask
     x_masked = mask .* x
     st = computest(t, x_masked)
-    temp1 = exp.(st.s)
-    temp2 = invmask .* (x .* temp1 + st.t)
-    y = x_masked .+ temp2
+    y = x_masked + (1 .- mask) .* (x .* exp.(st.s) + st.t)
     return (rv=y, logabsdetjacob=logabsdetjacob(t, nothing; s=st.s))
 end
 
 function forward(it::Inversed{T}, y) where {T<:AbstractAffineCoupling}
-    t = inv(it)
-    mask = t.mask
-    invmask = 1 .- mask
+    t = inv(it); mask = t.mask
     y_masked = mask .* y
     st = computest(t, y_masked)
-    temp1 = (y - st.t)
-    temp2 = exp.(-st.s)
-    temp3 = temp1 .* temp2
-    temp4 = invmask .* temp3
-    x = y_masked .+ temp4
+    x = y_masked + (1 .- mask) .* (y - st.t) .* exp.(-st.s)
     return (rv=x, logabsdetjacob=-logabsdetjacob(t, nothing; s=st.s))
 end
 
