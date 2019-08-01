@@ -43,8 +43,10 @@ function forward(t::T, x) where {T<:AbstractAffineCoupling}
     x_masked = mask .* x
     st = computest(t, x_masked)
     temp1 = exp.(st.s)
-    temp2 = invmask .* (x .* temp1 + st.t)
-    y = x_masked .+ temp2
+    temp2 = x .* temp1 
+    temp3 = temp2 .+ st.t
+    temp4 = invmask .* temp3
+    y = x_masked .+ temp4
     return (rv=y, logabsdetjacob=logabsdetjacob(t, nothing; s=st.s))
 end
 
@@ -54,7 +56,7 @@ function forward(it::Inversed{T}, y) where {T<:AbstractAffineCoupling}
     invmask = 1 .- mask
     y_masked = mask .* y
     st = computest(t, y_masked)
-    temp1 = (y - st.t)
+    temp1 = y .- st.t
     temp2 = exp.(-st.s)
     temp3 = temp1 .* temp2
     temp4 = invmask .* temp3
