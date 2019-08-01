@@ -45,10 +45,7 @@ compose(ts...) = Composed(tuple(ts...))
 
 inv(ct::Composed) = compose(inv.(reverse(ct.ts))...)
 
-function applycomposed(::Tuple{}, res::T)::T where {T}
-    return res
-end
-
+applycomposed(::Tuple{}, res) = res
 function applycomposed(ts::Tuple, res::T)::T where {T}
     res′ = forward(first(ts), res.rv)
     return applycomposed(tail(ts), (rv=res′.rv, logabsdetjacob=res.logabsdetjacob + res′.logabsdetjacob))
@@ -58,7 +55,7 @@ function forward(ct::Composed, x)
     # Evaluate the first transform to init `res` so that 
     # we avoid possible type instability issues, which would happen
     # especially using GPUs.
-    res = forward(first(ct.ts), x)
+    res = forward(ct.ts[1], x)
     return applycomposed(tail(ct.ts), res)
 end
 
@@ -99,9 +96,9 @@ end
 ### Flow
 # Note: the flow abstraction is a draft and subject to change
 
-struct Flow{T<:AbstractInvertibleTransformation,D}
+struct Flow{T<:AbstractInvertibleTransformation}
     t::T
-    base::D
+    base
 end
 
 # TODO: figure out what's the best way to do below
@@ -112,7 +109,7 @@ rand(f::Flow{T}, n::Int=1) where {T<:AbstractInvertibleTransformation} = f.t(ran
 function logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation}
     it = inv(f.t)
     res = forward(it, x)
-    return logpdf(f.base, res.rv) .+ res.logabsdetjacob
+    return logpdf(f.base, res.rv) + res.logabsdetjacob
 end
 
 export Flow, rand, logpdf

@@ -15,8 +15,8 @@ end
 InvertibleBatchNorm(chs::Int; ϵ=1f-5, momentum=0.1f0) = InvertibleBatchNorm(
     Flux.param(zeros(Float32, chs)),
     Flux.param(zeros(Float32, chs)),
-    zeros(Float32, chs),
-    ones(Float32, chs),
+    zeros(Float32, chs), 
+    ones(Float32, chs), 
     ϵ, 
     momentum, 
     true
@@ -31,17 +31,11 @@ function affinesize(x)
 #     return tuple(affinesize...)
 end
 
-function logabsdetjacob(
+logabsdetjacob(
     t::T, 
     x; 
-    σ²=reshape(t.σ², affinesize(x))
-) where {T<:InvertibleBatchNorm}
-    temp1 = σ² .+ t.ϵ
-    temp2 = log.(temp1)
-    temp3 = temp2 ./ eltype(x)(2)
-    temp4 = t.logγ .- temp3
-    return sum(temp4) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
-end
+    σ²=reshape(t.σ², affinesize(x)...)
+) where {T<:InvertibleBatchNorm} =  (sum(t.logγ - log.(σ² .+ t.ϵ) / eltype(x)(2))) .* typeof(Flux.data(x))(ones(Float32, size(x, 2))')
 
 function forward(t::T, x) where {T<:InvertibleBatchNorm} 
     @assert size(x, ndims(x) - 1) == length(t.μ) "`InvertibleBatchNorm` expected $(length(t.μ)) channels, got $(size(x, ndims(x) - 1))"
@@ -58,8 +52,7 @@ function forward(t::T, x) where {T<:InvertibleBatchNorm}
         dims = length(size(x))
         axes = [1:dims-2; dims] # axes to reduce along (all but channels axis)
         μ = mean(x, dims=axes)
-        temp = x .- μ
-        σ² = sum(temp .^ 2, dims=axes) ./ m
+        σ² = sum((x .- μ) .^ 2, dims=axes) ./ m
         ϵ = Flux.data(convert(Tx, t.ϵ))
         # Update moving mean/std
         mtm = Flux.data(convert(Tx, t.momentum))
@@ -89,9 +82,8 @@ function forward(it::Inversed{T}, y) where {T<:InvertibleBatchNorm}
         
     temp = y .- β
     ŷ = temp ./ γ
-    temp1 = sqrt.(σ² .+ t.ϵ)
-    temp2 = temp1 .* ŷ
-    x = temp2 .+ μ
+    temp = sqrt.(σ² .+ t.ϵ)
+    x = ŷ .* temp .+ μ
     return (rv=x, logabsdetjacob=logabsdetjacob(it, x))
 end
 
