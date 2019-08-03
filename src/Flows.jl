@@ -68,6 +68,8 @@ export AbstractInvertibleTransformation, logabsdetjacob, forward,
        Inversed, inv, 
        Composed, compose
 
+### Transformations
+
 # Logit transformation
 
 using StatsFuns: logistic, logit
@@ -123,6 +125,7 @@ export Flow, rand, logpdf
 
 ### Flux support
 
+# Abstractions
 Flux.children(t::T) where {T<:AbstractInvertibleTransformation} = map(pn -> getfield(t, pn), propertynames(t))
 Flux.mapchildren(f, t::T) where {T<:AbstractInvertibleTransformation} = T(f.(Flux.children(ct))...)
 
@@ -131,11 +134,14 @@ Flux.@treelike(Inversed)
 Flux.children(ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = tuple(ct.ts...)
 Flux.mapchildren(f, ct::Composed{T}) where {T<:AbstractInvertibleTransformation} = compose(f.(Flux.children(ct))...)
 
+# Transformations
 Flux.@treelike(AffineCoupling)
 Flux.@treelike(AffineCouplingSlow)
 
+# Distributions
 Flux.@treelike(DiagNormal)
 
+# Flow
 Flux.@treelike(Flow)
 
 

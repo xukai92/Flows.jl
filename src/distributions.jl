@@ -1,12 +1,9 @@
 # Normal distribution with diagonal covariance that is easy to work with GPU
 
-struct DiagNormal{TD,TP}
-    μ::TP
-    logσ::TP
+struct DiagNormal{T}
+    μ::T
+    logσ::T
 end
-
-DiagNormal{TD}(μ::TP, logσ::TP) where {TD,TP} = DiagNormal{TD,TP}(μ, logσ)
-DiagNormal(μ::TP, logσ::TP) where {TP} = DiagNormal{:cpu,TP}(μ, logσ)
 
 # The constant below is a hack to make things work on GPU.
 const LOG2PI32 = log(2Float32(pi))
@@ -18,7 +15,7 @@ function logpdf(d::DiagNormal, x)
     return sum(-(LOG2PI32 .+ d.logσ .+ diffsq ./ σ); dims=1) ./ 2
 end
 
-rand(d::DiagNormal{:cpu,TP}, n::Int=1) where {TP} = randn(Float32, length(d.μ), n) .* exp.(d.logσ) .+ d.μ
+rand(d::DiagNormal, n::Int=1) = randn(Float32, length(d.μ), n) .* exp.(d.logσ) .+ d.μ
 
 # Mixture models
 
@@ -60,4 +57,4 @@ function rand(d::MixtureModel, n::Int=1)
 end
 
 Flux.mapchildren(f, d::MixtureModel) = MixtureModel(d.n_mixtures, f(d.logit_weights), f.(d.components))
-Flux.children(d::MixtureModel) = (d.n_mixtures, d.logit_weights, d.components)
+Flux.children(d::MixtureModel) = tuple(d.n_mixtures, d.logit_weights, d.components...)

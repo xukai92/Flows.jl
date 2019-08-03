@@ -1,13 +1,11 @@
 # Make some functions CUDA friendly
 
-using CuArrays: @cufunc
+import CuArrays
 
-@cufunc logit(x) = log(x) - log(1 - x)
-@cufunc logistic(x) = inv(exp(-x) + 1)
+CuArrays.@cufunc logit(x) = log(x) - log(1 - x)
+CuArrays.@cufunc logistic(x) = inv(exp(-x) + 1)
 
 # Fix for broadcast ^
-
-import CuArrays
 
 CuArrays.culiteral_pow(::typeof(^), x::T, ::Val{0}) where {T<:Real} = one(x)
 CuArrays.culiteral_pow(::typeof(^), x::T, ::Val{1}) where {T<:Real} = x
@@ -17,10 +15,4 @@ CuArrays.culiteral_pow(::typeof(^), x::T, ::Val{p}) where {T<:Real,p} = CUDAnati
 
 # Distributions
 
-Flux.gpu(d::DiagNormal) = DiagNormal{:gpu}(Flux.gpu(d.μ), Flux.gpu(d.logσ))
-Flux.cpu(d::DiagNormal) = DiagNormal{:cpu}(Flux.cpu(d.μ), Flux.cpu(d.logσ))
-
-rand(d::DiagNormal{:gpu,TP}, n::Int=1) where {TP} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* exp.(d.logσ) .+ d.μ
-
-Flux.gpu(d::MixtureModel) = MixtureModel(d.n_mixtures, Flux.gpu(d.logit_weights), Flux.gpu.(d.components))
-Flux.cpu(d::MixtureModel) = MixtureModel(d.n_mixtures, Flux.cpu(d.logit_weights), Flux.cpu.(d.components))
+rand(d::DiagNormal{T}, n::Int=1) where {T1,T2,TC<:CuArrays.CuArray,T<:Union{TC,Flux.TrackedArray{T1,T2,TC}}} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* exp.(d.logσ) .+ d.μ
