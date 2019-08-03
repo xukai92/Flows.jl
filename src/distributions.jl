@@ -1,10 +1,63 @@
-# Define a MvNormal distribution that is easy to work with GPU
-struct MvNormal01{T}
-    dim::Int
+# Normal distribution with diagonal covariance that is easy to work with GPU
+
+struct DiagNormal{TD,TP}
+    μ::TP
+    logσ::TP
 end
-MvNormal01(dim::Int) = MvNormal01{:cpu}(dim)
+
+DiagNormal{TD}(μ::TP, logσ::TP) where {TD,TP} = DiagNormal{TD,TP}(μ, logσ)
+DiagNormal(μ::TP, logσ::TP) where {TP} = DiagNormal{:cpu,TP}(μ, logσ)
 
 # The constant below is a hack to make things work on GPU.
 const LOG2PI32 = log(2Float32(pi))
-logpdf(d::MvNormal01, x) = sum(-(LOG2PI32 .+ x .* x); dims=1) ./ 2
-rand(d::MvNormal01{:cpu}, n::Int=1) = randn(Float32, d.dim, n)
+
+function logpdf(d::DiagNormal, x)
+    diff = x .- d.μ
+    diffsq = diff .* diff
+    σ = exp.(d.logσ)
+    return sum(-(LOG2PI32 .+ d.logσ .+ diffsq ./ σ); dims=1) ./ 2
+end
+
+rand(d::DiagNormal{:cpu,TP}, n::Int=1) where {TP} = randn(Float32, length(d.μ), n) .* exp.(d.logσ) .+ d.μ
+
+# Mixture models
+
+struct MixtureModel{TW,TC}
+    # Number of mixtures
+    n_mixtures::Int
+    # Weights in log space
+    logit_weights::TW
+    # Actual components
+    components::TC
+end
+
+function MixtureModel(components...; learn_weights=true)
+    n_mixtures = length(components)
+    logit_weights = zeros(Float32, n_mixtures)
+    learn_weights && (logit_weights = logit_weights |> Flux.param)
+    TW = typeof(logit_weights)
+    TC = typeof(components)
+    return MixtureModel{TW,TC}(n_mixtures, logit_weights, components)
+end
+
+compute_log_weights(d::MixtureModel) = d.logit_weights .- logsumexp(d.logit_weights; dims=1)
+
+function logpdf(d::MixtureModel, x)
+    log_probs = vcat(logpdf.(d.components, Ref(x))...)
+    log_weights = compute_log_weights(d)
+    log_weightedprobs = log_probs .+ log_weights
+    return logsumexp(log_weightedprobs; dims=1)
+end
+
+function rand(d::MixtureModel, n::Int=1)
+    log_weights = compute_log_weights(d)
+    x = []
+    for _ in 1:n
+        i = rand(Categorical(exp.(log_weights)))
+        push!(x, rand(d.components[i], 1))
+    end
+    return hcat(x...)
+end
+
+Flux.mapchildren(f, d::MixtureModel) = MixtureModel(d.n_mixtures, f(d.logit_weights), f.(d.components))
+Flux.children(d::MixtureModel) = (d.n_mixtures, d.logit_weights, d.components)

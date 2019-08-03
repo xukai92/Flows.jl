@@ -16,7 +16,7 @@ function test_AffineCoupling()
     res = forward(t, x)
     y = res.rv
     @test size(res.rv) == size(x)
-    @test size(res.logabsdetjacob) == (1,n)
+    @test size(res.logabsdetjacob) == (1, n)
     it = inv(t)
     res2 = forward(it, y)
     @test Tracker.data(res2.rv) ≈ x

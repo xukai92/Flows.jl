@@ -8,6 +8,15 @@ import Base: inv
 import Flux
 import Distributions: rand, logpdf
 
+### Some basic functions
+
+import StatsFuns: logsumexp
+
+function logsumexp(x; dims=1)
+    u = maximum(x)
+    return u .+ log.(sum(exp.(x .- u); dims=dims))
+end
+
 ### Abstractions
 
 abstract type AbstractInvertibleTransformation end
@@ -78,8 +87,9 @@ export InvertibleBatchNorm
 
 # Distributions
 
+using Distributions: Categorical
 include("distributions.jl")
-export MvNormal01
+export DiagNormal, MixtureModel
 
 # Make all transformations callable.
 # This has to be done in this manner because
@@ -98,13 +108,14 @@ struct Flow{T<:AbstractInvertibleTransformation}
 end
 
 # TODO: figure out what's the best way to do below
-rand(f::Flow{T}, n::Int=1) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n::Int)).rv
+rand(f::Flow{T}, n::Int=1) where {T<:AbstractInvertibleTransformation} = f.t(rand(f.base, n)).rv
+
+forward(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation} = forward(inv(f.t), x)
 
 # We cannot use broadcast as that doesn't work with 
 # multivariate random variables.
 function logpdf(f::Flow{T}, x) where {T<:AbstractInvertibleTransformation}
-    it = inv(f.t)
-    res = forward(it, x)
+    res = forward(f, x)
     return logpdf(f.base, res.rv) + res.logabsdetjacob
 end
 
@@ -122,6 +133,8 @@ Flux.mapchildren(f, ct::Composed{T}) where {T<:AbstractInvertibleTransformation}
 
 Flux.@treelike(AffineCoupling)
 Flux.@treelike(AffineCouplingSlow)
+
+Flux.@treelike(DiagNormal)
 
 Flux.@treelike(Flow)
 

@@ -12,7 +12,7 @@ end
 function computest(t::AffineCoupling, input)
     dim = size(input, 1)
     st = t.st(input)
-    return (s=logistic.(st[1:dim,:] .+ 2), t=st[dim+1:end,:])
+    return (s=logistic.(st[1:dim,:] .+ 2) .+ 1f-3, t=st[dim+1:end,:])
 end
 computes(t::AffineCoupling, input) = computest(t, input).s
 
@@ -24,7 +24,7 @@ struct AffineCouplingSlow <: AbstractAffineCoupling
     mask
 end
 
-computes(t::AffineCouplingSlow, input) = logistic.(t.s(input) .+ 2)
+computes(t::AffineCouplingSlow, input) = logistic.(t.s(input) .+ 2) .+ 1f-3
 computest(t::AffineCouplingSlow, input) = (s=computes(t, input), t=t.t(input))
 
 logabsdetjacob(
