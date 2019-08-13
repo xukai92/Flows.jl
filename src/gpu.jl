@@ -15,4 +15,4 @@ CuArrays.culiteral_pow(::typeof(^), x::T, ::Val{p}) where {T<:Real,p} = CUDAnati
 
 # Distributions
 
-rand(d::DiagNormal{T}, n::Int=1) where {T1,T2,TC<:CuArrays.CuArray,T<:Union{TC,Flux.TrackedArray{T1,T2,TC}}} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* exp.(d.logσ) .+ d.μ
+rand(d::DiagNormal{T}, n::Int=1) where {T1,T2,TC<:CuArrays.CuArray,T<:Union{TC,Flux.TrackedArray{T1,T2,TC}}} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* exp.(d.logσsq ./ 2) .+ d.μ

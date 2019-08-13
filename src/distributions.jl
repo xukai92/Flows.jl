@@ -2,7 +2,7 @@
 
 struct DiagNormal{T}
     μ::T
-    logσ::T
+    logσsq::T
 end
 
 # The constant below is a hack to make things work on GPU.
@@ -11,11 +11,11 @@ const LOG2PI32 = log(2Float32(pi))
 function logpdf(d::DiagNormal, x)
     diff = x .- d.μ
     diffsq = diff .* diff
-    σ = exp.(d.logσ)
-    return sum(-(LOG2PI32 .+ d.logσ .+ diffsq ./ σ); dims=1) ./ 2
+    σsq = exp.(d.logσsq)
+    return sum(-(LOG2PI32 .+ d.logσsq .+ diffsq ./ σsq); dims=1) ./ 2
 end
 
-rand(d::DiagNormal, n::Int=1) = randn(Float32, length(d.μ), n) .* exp.(d.logσ) .+ d.μ
+rand(d::DiagNormal, n::Int=1) = randn(Float32, length(d.μ), n) .* exp.(d.logσsq ./ 2) .+ d.μ
 
 # Mixture models
 
@@ -37,7 +37,7 @@ function MixtureModel(components...; learn_weights=true)
     return MixtureModel{TW,TC}(n_mixtures, logit_weights, components)
 end
 
-compute_log_weights(d::MixtureModel) = d.logit_weights .- logsumexp(d.logit_weights; dims=1)
+compute_log_weights(d::MixtureModel) = d.logit_weights .- logsumexp(d.logit_weights; dims=:)
 
 function logpdf(d::MixtureModel, x)
     log_probs = vcat(logpdf.(d.components, Ref(x))...)

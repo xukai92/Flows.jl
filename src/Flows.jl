@@ -5,16 +5,24 @@ using Requires
 @init @require CuArrays="3a865a2d-5b23-5a0f-bc46-62713ec82fae" include("gpu.jl")
 
 import Base: inv
-import Flux
 import Distributions: rand, logpdf
+import Flux, Tracker
 
 ### Some basic functions
 
 import StatsFuns: logsumexp
 
-function logsumexp(x; dims=1)
+function logsumexp(x; dims=:)
     u = maximum(x)
     return u .+ log.(sum(exp.(x .- u); dims=dims))
+end
+
+logsumexp(x::Tracker.TrackedArray; dims=:) = Tracker.track(logsumexp, x; dims=dims)
+
+Tracker.@grad function logsumexp(x::Tracker.TrackedArray; dims=:)
+    lse = logsumexp(Tracker.data(x); dims=dims) 
+    se = exp.(lse)
+    return lse, Δ -> (Δ .* exp.(x) ./ se,)
 end
 
 ### Abstractions
