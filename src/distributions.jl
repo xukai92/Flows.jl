@@ -2,20 +2,25 @@
 
 struct DiagNormal{T}
     μ::T
-    logσsq::T
+    realσsq::T
 end
 
 # The constant below is a hack to make things work on GPU.
 const LOG2PI32 = log(2Float32(pi))
 
+function DiagNormal(μ; σ=ones(eltype(μ), size(μ)))
+    return DiagNormal(μ, invsoftplus.(σ .^ 2))
+end
+
 function logpdf(d::DiagNormal, x)
     diff = x .- d.μ
     diffsq = diff .* diff
-    σsq = exp.(d.logσsq)
-    return sum(-(LOG2PI32 .+ d.logσsq .+ diffsq ./ σsq); dims=1) ./ 2
+    σsq = softplus.(d.realσsq)
+    logσsq = log.(σsq)
+    return sum(-(LOG2PI32 .+ logσsq .+ diffsq ./ σsq); dims=1) ./ 2
 end
 
-rand(d::DiagNormal, n::Int=1) = randn(Float32, length(d.μ), n) .* exp.(d.logσsq ./ 2) .+ d.μ
+rand(d::DiagNormal, n::Int=1) = randn(Float32, length(d.μ), n) .* sqrt.(softplus.(d.realσsq)) .+ d.μ
 
 # Mixture models
 

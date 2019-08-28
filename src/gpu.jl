@@ -2,6 +2,9 @@
 
 import CuArrays
 
+CuArrays.@cufunc softplus(x) = x < 9 ? log1p(exp(x)) : x < 16 ? x + exp(-x) : x
+CuArrays.@cufunc invsoftplus(x) = x <= 9 ? log(expm1(x)) : x <= 16 ? x - exp(-x) : x
+
 CuArrays.@cufunc logit(x) = log(x) - log(1 - x)
 CuArrays.@cufunc logistic(x) = inv(exp(-x) + 1)
 
@@ -15,4 +18,4 @@ CuArrays.culiteral_pow(::typeof(^), x::T, ::Val{p}) where {T<:Real,p} = CUDAnati
 
 # Distributions
 
-rand(d::DiagNormal{T}, n::Int=1) where {T1,T2,TC<:CuArrays.CuArray,T<:Union{TC,Flux.TrackedArray{T1,T2,TC}}} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* exp.(d.logσsq ./ 2) .+ d.μ
+rand(d::DiagNormal{T}, n::Int=1) where {T1,T2,TC<:CuArrays.CuArray,T<:Union{TC,Flux.TrackedArray{T1,T2,TC}}} = (randn(Float32, length(d.μ), n) |> Flux.gpu) .* sqrt.(softplus.(d.realσsq)) .+ d.μ

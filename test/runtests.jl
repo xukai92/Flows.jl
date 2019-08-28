@@ -1,7 +1,7 @@
 using Test, Flows
 # using CuArrays
 
-@testset "Tests" begin
+@testset "Tests" begin    
     @testset "Abstraction" begin
         # Check composition by composing one transformation and its inverse
         t1 = Logit(0, 1)
@@ -17,4 +17,5 @@ using Test, Flows
 
     include("logit.jl")
     include("coupling.jl")
+    include("norm.jl")
 end

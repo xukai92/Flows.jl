@@ -7,22 +7,23 @@ using Requires
 import Base: inv
 import Distributions: rand, logpdf
 import Flux, Tracker
+using StatsFuns: softplus, invsoftplus
 
 ### Some basic functions
 
 import StatsFuns: logsumexp
 
 function logsumexp(x; dims=:)
-    u = maximum(x)
-    return u .+ log.(sum(exp.(x .- u); dims=dims))
+    u = maximum(x; dims=1)
+    lsediff = log.(sum(exp.(x .- u); dims=dims))
+    return u .+ lsediff
 end
 
 logsumexp(x::Tracker.TrackedArray; dims=:) = Tracker.track(logsumexp, x; dims=dims)
 
 Tracker.@grad function logsumexp(x::Tracker.TrackedArray; dims=:)
-    lse = logsumexp(Tracker.data(x); dims=dims) 
-    se = exp.(lse)
-    return lse, Δ -> (Δ .* exp.(x) ./ se,)
+    lse = logsumexp(Tracker.data(x); dims=dims)
+    return lse, Δ -> (Δ .* exp.(x .- lse),)
 end
 
 ### Abstractions
